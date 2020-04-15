@@ -23,7 +23,7 @@
        acc nil]
     (let [[match? s rest-s] (process-fn f s)]
       (if-not match? nil
-              (let [acc (cond-> acc (keyword? f) (assoc f s))]
+              (let [acc (cond-> acc (and (keyword? f)) (assoc f s))]
                 (if (and rest-s rest-f)
                   (recur rest-f rest-s acc)
                   {:acc acc :f rest-f :s rest-s}))))))

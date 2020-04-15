@@ -1,9 +1,17 @@
 (ns chrono.mask
-  (:require [chrono.util :as util]
-            [clojure.string :as str]
-            #?(:cljs [goog.string])
-            #?(:cljs [goog.string.format]))
-  (:refer-clojure :exclude [resolve]))
+  (:refer-clojure :exclude [resolve])
+  #?@
+   (:clj
+    [(:require
+      [chrono.io :as io]
+      [chrono.util :as util]
+      [clojure.string :as str])]
+    :cljs
+    [(:require
+      [chrono.io :as io]
+      [chrono.util :as util]
+      [clojure.string :as str]
+      goog.string)]))
 
 (defn- format-str [fmt & args]
   (apply
@@ -12,37 +20,34 @@
    fmt
    args))
 
+(defn mask-parse-matcher [f s]
+  (let [key? (contains? util/format-patterns f)
+        f-len (util/format-patterns f)
+        p (util/patternize f)
+        [match-s cur-s rest-s :as res] (some-> p
+                                               (#(str "(" % ")" "(.+)?"))
+                                               re-pattern
+                                               (re-matches s))
+        res (if (and key?
+                     (not= f-len (count cur-s))
+                     (nil? rest-s)
+                     ((re-matches (re-pattern p) (str cur-s \0)))) [s "" s] res)]
+    (if-not res [s "" s] res)))
+
 (defn parse [s fmt]
-  (let [fmt (map #(cond-> % (vector? %) first) fmt)
-        pat (map #(or (util/parse-patterns %) (util/sanitize %)) fmt)
-        drop-pat (-> (remove keyword? fmt)
+  (let [drop-pat (-> (remove keyword? fmt)
                      str/join
                      (#(str \["^0-9" % \]))
-                     re-pattern)]
-    (loop [s (some-> s (str/replace drop-pat ""))
+                     re-pattern)
+        s (some-> s (str/replace drop-pat ""))
+        res (io/priv-parse mask-parse-matcher {:s s :f fmt})]
+    (-> res :acc
+        (->> (filter #(-> % val empty? not)))
+        (#(zipmap (keys %) (map util/parse-int (vals %))))
+        (cond-> (:s res) (assoc :not-parsed (:s res))))))
 
-           [f & rest-f :as fmts] fmt
-           [p & rest-p :as pats] pat
-           acc                   {}]
-      (if-not (and s f)
-        acc
-        (let [ahead                  "(.+)?"
-              pat                    (re-pattern (str "(" p ")" ahead))
-              [match-s cur-s rest-s] (re-matches pat s)
-              key?                   (contains? util/format-patterns f)
-              f-len                  (util/format-patterns f)]
-          (cond
-            (and match-s
-                 (or (not key?)
-                     (= f-len (count cur-s))
-                     (some? rest-s)
-                     (not (re-matches (re-pattern p) (str cur-s \0)))))
-            (recur rest-s rest-f rest-p (cond-> acc key? (assoc f (util/parse-int cur-s))))
 
-            (not (or match-s key?)) (recur (str f s) fmts pats acc)
-            (or match-s (= "0" s))  (assoc acc :not-parsed s)
-            :else                   acc))))))
-
+ ;          :acc
 (defn build [t fmt]
   (reduce (fn [acc f]
             (let [kw (cond-> f (vector? f) first)

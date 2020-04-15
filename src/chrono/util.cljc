@@ -10,6 +10,16 @@
    :sec   "(?:[0-5]\\d|\\d)"
    :ms    "(?:\\d\\d\\d|\\d\\d|\\d)"})
 
+(defn sanitize [s]
+  (str/replace s #"[-.\+*?\[^\]$(){}=!<>|:\\]" #(str \\ %)))
+
+(defn patternize [f]
+  (if (vector? f)
+    (or (->> f (filter #(= java.util.regex.Pattern (type %))) first)
+        (-> first
+            (#(or (parse-patterns %) (sanitize %)))))
+    (or (parse-patterns f) (sanitize f))))
+
 (def format-patterns
   {:year  4
    :month 2
@@ -18,9 +28,6 @@
    :min   2
    :sec   2
    :ms    3})
-
-(defn sanitize [s]
-  (str/replace s #"[-.\+*?\[^\]$(){}=!<>|:\\]" #(str \\ %)))
 
 (def iso-fmt [:year "-" :month "-" :day "T" :hour ":" :min ":" :sec "." :ms])
 
