@@ -74,6 +74,8 @@ Also extended format allow passing custom format function for field into format 
 ```clj
 (require '[chrono.core :as ch])
 
-(ch/format {:some-field "abc"} [[:some-field (fn [v fmt-vector lang] (clojure.string/upper-case v))]]) ;; => "ABC"
-(ch/format {:some-field 5} [[:some-field 2 (fn [v [kw second-arg this-function] _] (+ v second-arg))]]) ;; => "7"
+(ch/format {:some-field "abc"} [[:some-field (fn [v fmt-vector lang] (clojure.string/upper-case v))]])
+;; => "ABC"
+(ch/format {:some-field 5} [[:some-field 2 (fn [v [kw second-arg this-function] _] (+ v second-arg))]])
+;; => "7"
 ```
