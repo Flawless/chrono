@@ -1,4 +1,4 @@
-parse and strict-parse functions allow to create datetime hashmap from it's string representations, format represented as a vecor, by default iso format is used.
+parse and strict-parse functions allow to create datetime hashmap from it's string representations. Format represented as a vecor. If ommited ISO format is used.
 
 ```clj
 (require '[chrono.core :as ch])
